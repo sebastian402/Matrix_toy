@@ -1,16 +1,30 @@
-import pygame
+"""Single-line Matrix quote renderer with typing mistakes and blinking cursor."""
+
+from __future__ import annotations
+
 import random
 import sys
+from typing import List, Tuple
+
+import pygame
 
 SCREEN_WIDTH, SCREEN_HEIGHT = 480, 320
-BLACK=(0,0,0); GREEN=(0,255,0); WHITE=(255,255,255)
-FONT_NAME="dejavusansmono"; FONT_SIZE=12
-LINE_X=10; LINE_Y=10
-TYPE_MIN_DELAY_MS=30; TYPE_MAX_DELAY_MS=90
-MISTAKE_MIN_DELAY_MS=30; MISTAKE_MAX_DELAY_MS=90
-BLINK_ON_MS=250; BLINK_OFF_MS=200; BLINK_COUNT=3
-MISTAKE_PROBABILITY=0.12
-MISTAKE_CHARS=list("abcdefghijklmnopqrstuvwxyz0123456789#$%&*+-=/<>")
+BLACK: Tuple[int, int, int] = (0, 0, 0)
+GREEN: Tuple[int, int, int] = (0, 255, 0)
+WHITE: Tuple[int, int, int] = (255, 255, 255)
+FONT_NAME = "dejavusansmono"
+FONT_SIZE = 12
+LINE_X = 10
+LINE_Y = 10
+TYPE_MIN_DELAY_MS = 30
+TYPE_MAX_DELAY_MS = 90
+MISTAKE_MIN_DELAY_MS = 30
+MISTAKE_MAX_DELAY_MS = 90
+BLINK_ON_MS = 250
+BLINK_OFF_MS = 200
+BLINK_COUNT = 3
+MISTAKE_PROBABILITY = 0.12
+MISTAKE_CHARS: List[str] = list("abcdefghijklmnopqrstuvwxyz0123456789#$%&*+-=/<>")
 
 LINES = [
     "Wake up, Neo.", "The Matrix has you.", "Follow the white rabbit.",
@@ -118,71 +132,88 @@ LINES = [
 ]
 
 def init_pygame():
-    pygame.init(); pygame.font.init()
-    screen = pygame.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT), pygame.FULLSCREEN)
+    pygame.init()
+    pygame.font.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
     pygame.mouse.set_visible(False)
     font = pygame.font.SysFont(FONT_NAME, FONT_SIZE)
     return screen, font
 
+
 def handle_events():
     for event in pygame.event.get():
-        if event.type==pygame.QUIT or (event.type==pygame.KEYDOWN and event.key==pygame.K_ESCAPE):
-            pygame.quit(); sys.exit()
+        if event.type == pygame.QUIT or (
+            event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE
+        ):
+            pygame.quit()
+            sys.exit()
 
-def render_line(screen,font,text,visible,show_cursor=True):
+
+def render_line(screen: pygame.Surface, font: pygame.font.Font, text: str, visible: int, show_cursor: bool = True):
     screen.fill(BLACK)
-    visible_text=text[:visible]
-    surf=font.render(visible_text,True,GREEN)
-    screen.blit(surf,(LINE_X,LINE_Y))
+    visible_text = text[:visible]
+    surf = font.render(visible_text, True, GREEN)
+    screen.blit(surf, (LINE_X, LINE_Y))
     if show_cursor:
-        size=font.get_height()-4
-        cx=LINE_X+surf.get_width()+4
-        cy=LINE_Y+2
-        pygame.draw.rect(screen,WHITE,(cx,cy,size,size))
+        size = font.get_height() - 4
+        cx = LINE_X + surf.get_width() + 4
+        cy = LINE_Y + 2
+        pygame.draw.rect(screen, WHITE, (cx, cy, size, size))
     pygame.display.update()
 
-def type_sentence(screen,font,sentence):
-    txt=""
+
+def type_sentence(screen: pygame.Surface, font: pygame.font.Font, sentence: str) -> str:
+    txt = ""
     for ch in sentence:
         handle_events()
-        if ch!=" " and random.random()<MISTAKE_PROBABILITY:
-            wrong=random.choice(MISTAKE_CHARS)
-            txt+=wrong; render_line(screen,font,txt,len(txt),True)
-            pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS,MISTAKE_MAX_DELAY_MS))
-            txt=txt[:-1]; render_line(screen,font,txt,len(txt),True)
-            pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS,MISTAKE_MAX_DELAY_MS))
-        txt+=ch; render_line(screen,font,txt,len(txt),True)
-        pygame.time.delay(random.randint(TYPE_MIN_DELAY_MS,TYPE_MAX_DELAY_MS))
+        if ch != " " and random.random() < MISTAKE_PROBABILITY:
+            wrong = random.choice(MISTAKE_CHARS)
+            txt += wrong
+            render_line(screen, font, txt, len(txt), True)
+            pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS, MISTAKE_MAX_DELAY_MS))
+            txt = txt[:-1]
+            render_line(screen, font, txt, len(txt), True)
+            pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS, MISTAKE_MAX_DELAY_MS))
+        txt += ch
+        render_line(screen, font, txt, len(txt), True)
+        pygame.time.delay(random.randint(TYPE_MIN_DELAY_MS, TYPE_MAX_DELAY_MS))
     return txt
 
-def delete_sentence(screen,font,sentence):
-    for i in range(len(sentence),-1,-1):
-        handle_events()
-        render_line(screen,font,sentence,i,True)
-        pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS,MISTAKE_MAX_DELAY_MS))
 
-def blink_full(screen,font,sentence):
+def delete_sentence(screen: pygame.Surface, font: pygame.font.Font, sentence: str):
+    for i in range(len(sentence), -1, -1):
+        handle_events()
+        render_line(screen, font, sentence, i, True)
+        pygame.time.delay(random.randint(MISTAKE_MIN_DELAY_MS, MISTAKE_MAX_DELAY_MS))
+
+
+def blink_full(screen: pygame.Surface, font: pygame.font.Font, sentence: str):
     for _ in range(BLINK_COUNT):
-        handle_events(); render_line(screen,font,sentence,len(sentence),True)
+        handle_events()
+        render_line(screen, font, sentence, len(sentence), True)
         pygame.time.delay(BLINK_ON_MS)
-        render_line(screen,font,sentence,len(sentence),False)
+        render_line(screen, font, sentence, len(sentence), False)
         pygame.time.delay(BLINK_OFF_MS)
 
+
 def main():
-    screen,font=init_pygame()
+    screen, font = init_pygame()
     random.shuffle(LINES)
     while True:
         for s in LINES:
             handle_events()
-            typed=type_sentence(screen,font,s)
+            typed = type_sentence(screen, font, s)
             pygame.time.delay(400)
-            blink_full(screen,font,typed)
+            blink_full(screen, font, typed)
             pygame.time.delay(150)
-            delete_sentence(screen,font,typed)
+            delete_sentence(screen, font, typed)
             pygame.time.delay(250)
         random.shuffle(LINES)
 
-if __name__=="__main__":
-    try: main()
+
+if __name__ == "__main__":
+    try:
+        main()
     finally:
-        pygame.quit(); sys.exit()
+        pygame.quit()
+        sys.exit()

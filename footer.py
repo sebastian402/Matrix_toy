@@ -1,11 +1,19 @@
 
+from __future__ import annotations
+
 import subprocess
 import time
+from typing import Dict, Optional, Tuple
+
 import pygame
 
-BLUE = (0, 160, 255)
+# Colors are shared by the footer ticker and intentionally kept module-level for reuse.
+BLUE: Tuple[int, int, int] = (0, 160, 255)
 
-def _safe_check_output(cmd):
+
+def _safe_check_output(cmd) -> str:
+    """Return stripped command output, swallowing any error."""
+
     try:
         return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL).strip()
     except Exception:
@@ -35,10 +43,13 @@ def _get_pi_model():
 
 def _get_os_version():
     try:
-        out = _safe_check_output(["grep", "PRETTY_NAME", "/etc/os-release"])
-        return out.split("=", 1)[1].strip().replace('"', "")
+        with open("/etc/os-release", "r", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("PRETTY_NAME="):
+                    return line.split("=", 1)[1].strip().strip('"')
     except Exception:
         return "UNKNOWN OS"
+    return "UNKNOWN OS"
 
 def _get_geo():
     out = _safe_check_output(["curl", "-s", "-m", "2", "ipinfo.io/loc"])
@@ -47,7 +58,7 @@ def _get_geo():
 def _get_local_time():
     return time.strftime("%H:%M:%S %Z")
 
-def _build_ticker_text(state: dict) -> str:
+def _build_ticker_text(state: Dict[str, str]) -> str:
     parts = [
         f"LAN {state.get('lan_ip', 'N/A')}",
         f"PUBLIC {state.get('public_ip', 'N/A')}",
@@ -60,7 +71,7 @@ def _build_ticker_text(state: dict) -> str:
     base = base.replace("\x00", "")
     return base.upper() + "   •   "
 
-def init_footer_state() -> dict:
+def init_footer_state() -> Dict[str, str]:
     """Initialize footer state with system info."""
     now = time.time()
     state = {
@@ -71,49 +82,78 @@ def init_footer_state() -> dict:
         "geo": _get_geo(),
         "time": _get_local_time(),
         "last_refresh": now,
+        "_last_rendered_text": "",
+        "_last_rendered_surface": None,
     }
     state["ticker_text"] = _build_ticker_text(state)
     return state
 
-def _refresh_state(state: dict, dynamic_interval: float = 7.0) -> dict:
+def _refresh_state(state: Dict[str, str], dynamic_interval: float = 7.0) -> bool:
     """Refresh dynamic fields in the footer state.
-    - public_ip & geo: every dynamic_interval seconds
-    - time: every call
+
+    Returns True if any displayed field changed (so the ticker surface should be rerendered).
     """
+
     now = time.time()
-    last = state.get("last_refresh", 0.0)
+    last = float(state.get("last_refresh", 0.0))
+    changed = False
 
     if now - last >= dynamic_interval:
         state["public_ip"] = _get_public_ip()
         state["geo"] = _get_geo()
         state["last_refresh"] = now
+        changed = True
 
-    state["time"] = _get_local_time()
-    state["ticker_text"] = _build_ticker_text(state)
-    return state
+    new_time = _get_local_time()
+    if new_time != state.get("time"):
+        state["time"] = new_time
+        changed = True
+
+    if changed:
+        state["ticker_text"] = _build_ticker_text(state)
+
+    return changed
+
+
+def _get_ticker_surface(state: Dict[str, str], footer_font: pygame.font.Font) -> Optional[pygame.Surface]:
+    """Return a cached ticker surface, rerendering only when the text changes."""
+
+    ticker = state.get("ticker_text", "")
+    if not ticker:
+        return None
+
+    last_text = state.get("_last_rendered_text", "")
+    surface: Optional[pygame.Surface] = state.get("_last_rendered_surface")  # type: ignore[assignment]
+
+    if ticker != last_text or surface is None:
+        surface = footer_font.render(ticker, True, BLUE)
+        state["_last_rendered_text"] = ticker
+        state["_last_rendered_surface"] = surface
+
+    return surface
 
 def draw_footer(
     screen: pygame.Surface,
     footer_font: pygame.font.Font,
-    state: dict,
+    state: Dict[str, str],
     ticker_x: float,
     screen_width: int,
     screen_height: int,
     tick_speed: float = 1.0,
 ) -> float:
     """Draw the scrolling footer ticker.
+
     Returns the updated ticker_x position.
     Does NOT call display.update().
     """
-    state = _refresh_state(state)
 
-    ticker = state.get("ticker_text", "")
-    if not ticker:
+    changed = _refresh_state(state)
+    surf = _get_ticker_surface(state, footer_font)
+    if surf is None:
         return ticker_x
 
-    surf = footer_font.render(ticker, True, BLUE)
+    # Recompute width on rerender only.
     width = surf.get_width()
-
     x = int(ticker_x)
     y = screen_height - 18
     screen.blit(surf, (x, y))
@@ -122,5 +162,9 @@ def draw_footer(
     x -= tick_speed
     if x < -width:
         x = screen_width
+
+    # Keep cached surface in sync if text changed mid-frame (e.g., during slow renders).
+    if changed:
+        state["_last_rendered_surface"] = surf
 
     return float(x)
