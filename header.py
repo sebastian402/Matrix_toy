@@ -10,7 +10,7 @@ used in isolation for previews or tests.
 import math
 import random
 import time
-from typing import Tuple
+from typing import Optional, Tuple
 
 import pygame
 
@@ -109,8 +109,9 @@ def draw_header(
     scan_interval: int,
     title_text: str,
     screen_width: int,
+    version_text: Optional[str] = None,
 ) -> None:
-    """Draw the Matrix header: animated title + countdown timer.
+    """Draw the Matrix header: animated title + version + countdown timer.
 
     This function does NOT clear the screen and does NOT call display.update().
     """
@@ -143,7 +144,19 @@ def draw_header(
         display_title = base_title + " "
 
     title_surf = header_font.render(display_title, True, title_color)
-    screen.blit(title_surf, (10, 8))
+    title_pos = (10, 8)
+    screen.blit(title_surf, title_pos)
+
+    # ----- Optional version tag -----
+    if version_text:
+        version_surf = header_font.render(version_text, True, DIM_WHITE)
+        version_x = title_pos[0] + title_surf.get_width() + 10
+
+        # keep clear space for countdown on the right
+        max_x = screen_width - version_surf.get_width() - 80
+        version_x = min(version_x, max_x)
+
+        screen.blit(version_surf, (version_x, title_pos[1]))
 
     # ----- Countdown / SCANNING -----
     if scanning:

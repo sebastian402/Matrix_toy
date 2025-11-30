@@ -39,7 +39,8 @@ ROW_Y_START = 56   # start of network rows
 ROW_H       = 20   # row height (for bigger text)
 
 # Title text (animated)
-TITLE_TEXT   = "~/MATRIX PROXIMITY NET SCAN//"
+TITLE_TEXT    = "~/MATRIX PROXIMITY NET SCAN//"
+VERSION_TEXT  = "v0.1.0"
 
 # ---------- JSON helpers ----------
 
@@ -224,6 +225,7 @@ def draw_console(
         scan_interval=SCAN_INTERVAL,
         title_text=TITLE_TEXT,
         screen_width=SCREEN_WIDTH,
+        version_text=VERSION_TEXT,
     )
 
     # ----- Movie line under the title -----
