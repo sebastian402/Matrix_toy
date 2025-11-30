@@ -72,6 +72,19 @@ def _build_ticker_text(state: Dict[str, str]) -> str:
     base = base.replace("\x00", "")
     return base.upper() + "   •   "
 
+def _normalize_version_label(raw: Optional[str]) -> str:
+    """Return a usable version label, avoiding ambiguous placeholders like N/A."""
+
+    if not raw:
+        return "UNKNOWN VERSION"
+
+    cleaned = raw.strip()
+    if not cleaned or cleaned.upper() in {"N/A", "NA", "UNKNOWN"}:
+        return "UNKNOWN VERSION"
+
+    return cleaned
+
+
 def init_footer_state(version: Optional[str] = None) -> Dict[str, str]:
     """Initialize footer state with system info.
 
@@ -79,7 +92,7 @@ def init_footer_state(version: Optional[str] = None) -> Dict[str, str]:
         version: Optional version label to include at the start of the ticker.
     """
     now = time.time()
-    version_label = (version or "").strip() or "UNKNOWN VERSION"
+    version_label = _normalize_version_label(version)
     state = {
         "version": version_label,
         "lan_ip": _get_ip_address(),
