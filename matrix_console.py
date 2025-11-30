@@ -28,7 +28,7 @@ DIM_WHITE: Tuple[int, int, int] = (120, 120, 120)
 BLUE: Tuple[int, int, int] = (0, 160, 255)
 
 SCAN_INTERVAL = 21       # seconds between scans
-TICKER_SPEED  = 1        # pixels per frame
+TICKER_SPEED  = 2        # pixels per frame (faster ticker)
 MOVIE_TYPE_DELAY = 0.05  # seconds per character for movie line typing
 
 BASE_DIR = Path(__file__).resolve().parent

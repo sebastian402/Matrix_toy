@@ -145,7 +145,7 @@ def draw_footer(
     ticker_x: float,
     screen_width: int,
     screen_height: int,
-    tick_speed: float = 1.0,
+    tick_speed: float = 2.0,
 ) -> float:
     """Draw the scrolling footer ticker.
 
