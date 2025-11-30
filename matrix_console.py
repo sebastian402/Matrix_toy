@@ -1,33 +1,39 @@
 
-import sys
-import time
+from __future__ import annotations
+
+import json
 import math
+import os
 import random
 import subprocess
-import pygame
-import os
-import json
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple
 
-from matrix_movie_singleline import LINES
+import pygame
+
+from footer import draw_footer, init_footer_state
 from header import draw_header
-from footer import init_footer_state, draw_footer
+from matrix_movie_singleline import LINES
 
 # Screen / UI
 SCREEN_WIDTH, SCREEN_HEIGHT = 480, 320
 
-BLACK     = (0, 0, 0)
-GREEN     = (0, 255, 0)
-WHITE     = (255, 255, 255)
-DIM_WHITE = (120, 120, 120)
-BLUE      = (0, 160, 255)
+BLACK: Tuple[int, int, int] = (0, 0, 0)
+GREEN: Tuple[int, int, int] = (0, 255, 0)
+WHITE: Tuple[int, int, int] = (255, 255, 255)
+DIM_WHITE: Tuple[int, int, int] = (120, 120, 120)
+BLUE: Tuple[int, int, int] = (0, 160, 255)
 
 SCAN_INTERVAL = 21       # seconds between scans
 TICKER_SPEED  = 1        # pixels per frame
 MOVIE_TYPE_DELAY = 0.05  # seconds per character for movie line typing
 
-DISCOVERED_FILE = "discovered_devices.json"
-LAB_FILE        = "lab_devices.json"
+BASE_DIR = Path(__file__).resolve().parent
+DISCOVERED_FILE = BASE_DIR / "discovered_devices.json"
+LAB_FILE = BASE_DIR / "lab_devices.json"
 
 ROW_Y_START = 56   # start of network rows
 ROW_H       = 20   # row height (for bigger text)
@@ -37,31 +43,39 @@ TITLE_TEXT   = "~/MATRIX PROXIMITY NET SCAN//"
 
 # ---------- JSON helpers ----------
 
-def load_json(path, default):
-    if not os.path.exists(path):
+def load_json(path: Path, default):
+    """Load JSON data from *path*, returning *default* on any failure."""
+
+    if not path.exists():
         return default
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with path.open("r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
         return default
 
-def save_json(path, data):
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+
+def save_json(path: Path, data) -> None:
+    """Atomically save JSON data to *path* using a temporary file."""
+
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     os.replace(tmp, path)
 
 # ---------- WiFi scan & lab state ----------
 
-def _safe_check_output(cmd):
+def _safe_check_output(cmd) -> str:
+    """Return decoded output for *cmd* or an empty string on failure."""
+
     try:
         return subprocess.check_output(cmd, text=True, stderr=subprocess.DEVNULL)
     except Exception:
         return ""
 
-def scan_nmcli():
-    """Scan Wi-Fi networks using nmcli. Returns list of dicts."""
+
+def scan_nmcli() -> List[Dict[str, object]]:
+    """Scan Wi-Fi networks using nmcli and return sorted network dictionaries."""
     try:
         out = subprocess.check_output(
             ["nmcli", "-t", "-f", "SSID,SIGNAL,SECURITY,BSSID", "dev", "wifi"],
@@ -71,7 +85,7 @@ def scan_nmcli():
     except Exception:
         return []
 
-    nets = []
+    nets: List[Dict[str, object]] = []
     for line in out.splitlines():
         parts = line.split(":", 3)
         if len(parts) < 4:
@@ -95,7 +109,7 @@ def scan_nmcli():
     nets.sort(key=lambda x: x["signal"], reverse=True)
     return nets
 
-def update_discovered(discovered, nets):
+def update_discovered(discovered: Dict[str, Dict[str, object]], nets: List[Dict[str, object]]):
     now = datetime.utcnow().isoformat() + "Z"
     for n in nets:
         bssid = n.get("bssid")
@@ -116,7 +130,7 @@ def update_discovered(discovered, nets):
             discovered[bssid]["security"] = n["security"]
     return discovered
 
-def ensure_lab_entries(discovered, lab_devices):
+def ensure_lab_entries(discovered: Dict[str, Dict[str, object]], lab_devices: Dict[str, Dict[str, object]]):
     changed = False
     for bssid, info in discovered.items():
         if bssid not in lab_devices:
@@ -129,7 +143,9 @@ def ensure_lab_entries(discovered, lab_devices):
         save_json(LAB_FILE, lab_devices)
     return lab_devices
 
-def toggle_lab_device(bssid, discovered, lab_devices):
+def toggle_lab_device(
+    bssid: str, discovered: Dict[str, Dict[str, object]], lab_devices: Dict[str, Dict[str, object]]
+):
     info = discovered.get(bssid, {})
     entry = lab_devices.get(
         bssid,
@@ -143,12 +159,12 @@ def toggle_lab_device(bssid, discovered, lab_devices):
 
 # ---------- Drawing helpers ----------
 
-def sig_color(sig):
+def sig_color(sig: int) -> Tuple[int, int, int]:
     s = max(0, min(100, sig)) / 100.0
     g = int(80 + 175 * s)
     return (0, g, 0)
 
-def sig_level(sig):
+def sig_level(sig: int) -> int:
     if sig >= 80:
         return 4
     if sig >= 60:
@@ -159,7 +175,7 @@ def sig_level(sig):
         return 1
     return 0
 
-def draw_bars(screen, x, y, sig, color):
+def draw_bars(screen: pygame.Surface, x: int, y: int, sig: int, color: Tuple[int, int, int]) -> None:
     level = sig_level(sig)
     w = 4
     space = 1
@@ -174,25 +190,25 @@ def draw_bars(screen, x, y, sig, color):
             (bx, by, w, h),
         )
 
-def get_movie_line():
+def get_movie_line() -> str:
     return random.choice(LINES)
 
 def draw_console(
-    screen,
-    header_font,
-    row_font,
-    footer_font,
-    nets,
-    discovered,
-    lab_devices,
-    movie_line,
-    movie_visible_len,
-    remaining,
-    ticker_x,
-    cycle_start_time,
-    scanning,
-    footer_state,
-):
+    screen: pygame.Surface,
+    header_font: pygame.font.Font,
+    row_font: pygame.font.Font,
+    footer_font: pygame.font.Font,
+    nets: List[Dict[str, object]],
+    discovered: Dict[str, Dict[str, object]],
+    lab_devices: Dict[str, Dict[str, object]],
+    movie_line: str,
+    movie_visible_len: int,
+    remaining: float,
+    ticker_x: float,
+    cycle_start_time: float,
+    scanning: bool,
+    footer_state: Dict[str, str],
+) -> Tuple[float, Dict[int, str]]:
     """Draw the entire console frame and return (ticker_x, row_map)."""
     screen.fill(BLACK)
     now = time.time()

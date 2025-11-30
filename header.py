@@ -1,7 +1,17 @@
 
+"""Animated Matrix-style header for the Wi-Fi console.
+
+This module handles the title "dehashing" animation, blinking cursor, and the
+color-shifting countdown/rescan indicator displayed at the top of the console.
+It is intentionally self-contained (no cross-module imports) so the header can
+be used in isolation for previews or tests.
+"""
+
 import math
 import random
 import time
+from typing import Tuple
+
 import pygame
 
 # Colors (kept local so this module is self-contained)
@@ -13,6 +23,8 @@ BLUE      = (0, 160, 255)
 YELLOW    = (220, 220, 0)
 RED       = (255, 0, 0)
 
+Color = Tuple[int, int, int]
+
 CURSOR_CHAR = "▌"
 
 # Character set for de-hash animation of the title
@@ -21,6 +33,9 @@ JAP_CHARS = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@\\/_<>[]{}()=-_")
 def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int) -> str:
     """Return a partially revealed/dehashed version of the title text.
     During the last 1 second of the cycle the title is fully revealed.
+
+    Spaces are kept untouched so alignment remains stable while other
+    characters scramble.
     """
     period = float(scan_interval)
     if period <= 1:
@@ -37,14 +52,18 @@ def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int
 
     progress = max(0, min(length, int((cycle_t / reveal) * length)))
     out_chars = []
-    for i in range(length):
+    for i, char in enumerate(full_text):
+        if char == " ":
+            out_chars.append(" ")
+            continue
+
         if i < progress:
-            out_chars.append(full_text[i])
+            out_chars.append(char)
         else:
             out_chars.append(random.choice(JAP_CHARS))
     return "".join(out_chars)
 
-def _lerp_color(a, b, t: float):
+def _lerp_color(a: Color, b: Color, t: float) -> Color:
     """Linear interpolation between two RGB colors."""
     t = max(0.0, min(1.0, t))
     return (
@@ -53,7 +72,7 @@ def _lerp_color(a, b, t: float):
         int(a[2] + (b[2] - a[2]) * t),
     )
 
-def _get_countdown_color(remaining: float, scan_interval: int):
+def _get_countdown_color(remaining: float, scan_interval: int) -> Color:
     """Return the base color for the countdown text (no blinking logic here).
     Rules:
     - > 15s  : green (glowing handled in caller if needed)
@@ -90,7 +109,7 @@ def draw_header(
     scan_interval: int,
     title_text: str,
     screen_width: int,
-):
+) -> None:
     """Draw the Matrix header: animated title + countdown/rescan timer.
 
     This function does NOT clear the screen and does NOT call display.update().
