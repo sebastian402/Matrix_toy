@@ -39,8 +39,8 @@ ROW_Y_START = 56   # start of network rows
 ROW_H       = 20   # row height (for bigger text)
 
 # Title text (animated)
-TITLE_TEXT    = "~/MATRIX PROXIMITY NET SCAN//"
-VERSION_TEXT  = "v0.1.0"
+TITLE_TEXT   = "~/MATRIX PROXIMITY NET SCAN//"
+APP_VERSION  = "v0.1.0"
 
 # ---------- JSON helpers ----------
 
@@ -225,7 +225,7 @@ def draw_console(
         scan_interval=SCAN_INTERVAL,
         title_text=TITLE_TEXT,
         screen_width=SCREEN_WIDTH,
-        version_text=VERSION_TEXT,
+        version_text=APP_VERSION,
     )
 
     # ----- Movie line under the title -----
@@ -351,8 +351,9 @@ def main():
     cycle_start = time.time()
     scanning = False
     scanning_until = 0.0
-    ticker_x = float(SCREEN_WIDTH)
-    footer_state = init_footer_state(version=VERSION_TEXT)
+    # Start the ticker at the right edge; only a single numeric argument belongs here.
+    ticker_x: float = float(SCREEN_WIDTH)
+    footer_state = init_footer_state(version=APP_VERSION)
 
     current_movie_line = get_movie_line()
     movie_visible_len = 0
