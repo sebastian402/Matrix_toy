@@ -2,9 +2,9 @@
 """Animated Matrix-style header for the Wi-Fi console.
 
 This module handles the title "dehashing" animation, blinking cursor, and the
-color-shifting countdown/rescan indicator displayed at the top of the console.
-It is intentionally self-contained (no cross-module imports) so the header can
-be used in isolation for previews or tests.
+color-shifting countdown indicator displayed at the top of the console. It is
+intentionally self-contained (no cross-module imports) so the header can be
+used in isolation for previews or tests.
 """
 
 import math
@@ -110,7 +110,7 @@ def draw_header(
     title_text: str,
     screen_width: int,
 ) -> None:
-    """Draw the Matrix header: animated title + countdown/rescan timer.
+    """Draw the Matrix header: animated title + countdown timer.
 
     This function does NOT clear the screen and does NOT call display.update().
     """
@@ -153,7 +153,7 @@ def draw_header(
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
         return
 
-    # Normal countdown: XXs - RESCAN
+    # Normal countdown: XXs
     remaining_clamped = max(0.0, remaining)
     remaining_int = int(remaining_clamped)
     base_color = _get_countdown_color(remaining_clamped, scan_interval)
@@ -163,7 +163,7 @@ def draw_header(
         blink_on = (int(now * 4) % 2) == 0  # faster blink for urgency
 
         num_str = f"{remaining_int}"
-        suffix_str = "s - RESCAN"
+        suffix_str = "s"
 
         num_surf = header_font.render(num_str, True, base_color if blink_on else BLACK)
         suffix_surf = header_font.render(suffix_str, True, base_color)
@@ -175,6 +175,6 @@ def draw_header(
         screen.blit(suffix_surf, (x_start + num_surf.get_width(), 8))
     else:
         # Normal colored countdown (no blinking)
-        cd_text = f"{remaining_int}s - RESCAN"
+        cd_text = f"{remaining_int}s"
         cd_surf = header_font.render(cd_text, True, base_color)
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
