@@ -19,6 +19,7 @@ BLACK     = (0, 0, 0)
 GREEN     = (0, 255, 0)
 WHITE     = (255, 255, 255)
 DIM_WHITE = (120, 120, 120)
+CYAN      = (0, 200, 255)
 BLUE      = (0, 160, 255)
 YELLOW    = (220, 220, 0)
 RED       = (255, 0, 0)
@@ -149,14 +150,22 @@ def draw_header(
 
     # ----- Optional version tag -----
     if version_text:
-        version_surf = header_font.render(version_text, True, DIM_WHITE)
-        version_x = title_pos[0] + title_surf.get_width() + 10
+        version_surf = header_font.render(version_text, True, CYAN)
+        version_width = version_surf.get_width()
+        title_end = title_pos[0] + title_surf.get_width()
 
-        # keep clear space for countdown on the right
-        max_x = screen_width - version_surf.get_width() - 80
-        version_x = min(version_x, max_x)
+        reserved_right = 90  # keep clear space for countdown
+        preferred_x = screen_width - reserved_right - version_width - 10
 
-        screen.blit(version_surf, (version_x, title_pos[1]))
+        version_x = max(title_end + 10, preferred_x)
+        version_y = title_pos[1]
+
+        # If there is no horizontal room (long title), drop the version below
+        if version_x + version_width > screen_width - reserved_right:
+            version_x = title_pos[0]
+            version_y = title_pos[1] + header_font.get_height() + 2
+
+        screen.blit(version_surf, (version_x, version_y))
 
     # ----- Countdown / SCANNING -----
     if scanning:
