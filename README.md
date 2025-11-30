@@ -1,9 +1,3 @@
-Here is a clean, professional **README.md** tailored exactly for your Matrix Wi-Fi Scanner project running on Raspberry Pi with a 3.5" touchscreen, intro animation, movie lines, Matrix rain, Wi-Fi HUD, touch-selectable networks, action screens, and the toolbox.
-
-You can copy/paste this directly into GitHub as **README.md**.
-
----
-
 # 🟩 Matrix Scanner – Raspberry Pi Wi-Fi Security Console
 
 *A Matrix-themed real-time Wi-Fi scanner with animations, touch UI, and penetration-testing toolbox.*
