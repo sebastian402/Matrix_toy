@@ -177,26 +177,36 @@ def draw_header(
 
     # Normal countdown: XXs
     remaining_clamped = max(0.0, remaining)
-    remaining_int = int(remaining_clamped)
+    remaining_fmt = f"{remaining_clamped:.3f}"
     base_color = _get_countdown_color(remaining_clamped, scan_interval)
 
     # Last 3 seconds: blink only the numeric part
     if remaining_clamped <= 3.0:
         blink_on = (int(now * 4) % 2) == 0  # faster blink for urgency
 
-        num_str = f"{remaining_int}"
-        suffix_str = "s - RESCAN"
+        prefix_str = "RESCAN IN "
+        num_str = remaining_fmt
+        suffix_str = "s"
 
+        prefix_surf = header_font.render(prefix_str, True, base_color)
         num_surf = header_font.render(num_str, True, base_color if blink_on else BLACK)
         suffix_surf = header_font.render(suffix_str, True, base_color)
 
-        total_width = num_surf.get_width() + suffix_surf.get_width()
+        total_width = (
+            prefix_surf.get_width()
+            + num_surf.get_width()
+            + suffix_surf.get_width()
+        )
         x_start = screen_width - total_width - 10
 
-        screen.blit(num_surf, (x_start, 8))
-        screen.blit(suffix_surf, (x_start + num_surf.get_width(), 8))
+        screen.blit(prefix_surf, (x_start, 8))
+        screen.blit(num_surf, (x_start + prefix_surf.get_width(), 8))
+        screen.blit(
+            suffix_surf,
+            (x_start + prefix_surf.get_width() + num_surf.get_width(), 8),
+        )
     else:
         # Normal colored countdown (no blinking)
-        cd_text = f"{remaining_int}s - RESCAN"
+        cd_text = f"RESCAN IN {remaining_fmt}s"
         cd_surf = header_font.render(cd_text, True, base_color)
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
