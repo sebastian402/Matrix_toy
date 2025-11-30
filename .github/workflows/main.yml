@@ -1,0 +1,24 @@
+name: Auto Push Changes
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  auto-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Auto-commit changes
+        run: |
+          git add .
+          git commit -m "Automatyczny commit zmian przez Codex" || echo "Brak zmian do zakomitowania"
+          git push
