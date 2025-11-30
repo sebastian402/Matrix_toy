@@ -60,7 +60,7 @@ def _get_local_time():
 
 def _build_ticker_text(state: Dict[str, str]) -> str:
     parts = [
-        f"VERSION {state.get('version', 'N/A')}",
+        f"VERSION {state.get('version', 'UNKNOWN VERSION')}",
         f"LAN {state.get('lan_ip', 'N/A')}",
         f"PUBLIC {state.get('public_ip', 'N/A')}",
         f"MODEL {state.get('model', 'N/A')}",
@@ -79,8 +79,9 @@ def init_footer_state(version: Optional[str] = None) -> Dict[str, str]:
         version: Optional version label to include at the start of the ticker.
     """
     now = time.time()
+    version_label = (version or "").strip() or "UNKNOWN VERSION"
     state = {
-        "version": version or "N/A",
+        "version": version_label,
         "lan_ip": _get_ip_address(),
         "public_ip": _get_public_ip(),
         "model": _get_pi_model(),
