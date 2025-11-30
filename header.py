@@ -154,7 +154,7 @@ def draw_header(
         version_width = version_surf.get_width()
         title_end = title_pos[0] + title_surf.get_width()
 
-        reserved_right = 90  # keep clear space for countdown
+        reserved_right = 140  # keep clear space for countdown + suffix
         preferred_x = screen_width - reserved_right - version_width - 10
 
         version_x = max(title_end + 10, preferred_x)
@@ -185,7 +185,7 @@ def draw_header(
         blink_on = (int(now * 4) % 2) == 0  # faster blink for urgency
 
         num_str = f"{remaining_int}"
-        suffix_str = "s"
+        suffix_str = "s - RESCAN"
 
         num_surf = header_font.render(num_str, True, base_color if blink_on else BLACK)
         suffix_surf = header_font.render(suffix_str, True, base_color)
@@ -197,6 +197,6 @@ def draw_header(
         screen.blit(suffix_surf, (x_start + num_surf.get_width(), 8))
     else:
         # Normal colored countdown (no blinking)
-        cd_text = f"{remaining_int}s"
+        cd_text = f"{remaining_int}s - RESCAN"
         cd_surf = header_font.render(cd_text, True, base_color)
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
