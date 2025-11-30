@@ -352,7 +352,7 @@ def main():
     scanning = False
     scanning_until = 0.0
     ticker_x = float(SCREEN_WIDTH)
-    footer_state = init_footer_state()
+    footer_state = init_footer_state(version=VERSION_TEXT)
 
     current_movie_line = get_movie_line()
     movie_visible_len = 0

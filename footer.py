@@ -60,6 +60,7 @@ def _get_local_time():
 
 def _build_ticker_text(state: Dict[str, str]) -> str:
     parts = [
+        f"VERSION {state.get('version', 'N/A')}",
         f"LAN {state.get('lan_ip', 'N/A')}",
         f"PUBLIC {state.get('public_ip', 'N/A')}",
         f"MODEL {state.get('model', 'N/A')}",
@@ -71,10 +72,15 @@ def _build_ticker_text(state: Dict[str, str]) -> str:
     base = base.replace("\x00", "")
     return base.upper() + "   •   "
 
-def init_footer_state() -> Dict[str, str]:
-    """Initialize footer state with system info."""
+def init_footer_state(version: Optional[str] = None) -> Dict[str, str]:
+    """Initialize footer state with system info.
+
+    Args:
+        version: Optional version label to include at the start of the ticker.
+    """
     now = time.time()
     state = {
+        "version": version or "N/A",
         "lan_ip": _get_ip_address(),
         "public_ip": _get_public_ip(),
         "model": _get_pi_model(),
