@@ -56,6 +56,10 @@ The console stores network discovery history and lab flags beside the code for e
 - ESC or `q` exits the console; `r` triggers an immediate rescan.
 - Touch/mouse clicks on a network row toggle its lab flag for quick lab device marking.
 
+## Codex description (constraints to keep)
+- IMPORTANT: do not modify `header.py` or overwrite header animations. Version tag support is required. Auto-update launcher script must remain intact. Do not strip out the `version_text` argument from `draw_header()`.
+- Codex: `header.py` now includes `version_text` support and countdown simplification. `matrix_console.py` now passes `APP_VERSION`. Auto-update is handled by `update_and_run.sh`. These features must never be removed.
+
 ## Pushing to GitHub
 This environment currently has no Git remotes configured. To publish your changes:
 
