@@ -46,6 +46,26 @@ ssh "$PI_HOST" "cd $PI_DIR && PYGAME_HIDE_SUPPORT_PROMPT=1 python3 matrix_main.p
 ssh "$PI_HOST" "cd $PI_DIR && PYGAME_HIDE_SUPPORT_PROMPT=1 python3 matrix_main.py"
 ```
 
+## Autostart + auto-update setup (paste-ready commands)
+Run these on the Pi (over SSH) to install the provided autostart entry and update script so the app always pulls GitHub updates before launching:
+
+```bash
+# Set paths
+PI_DIR=/home/seba/wifi-toy
+
+# Ensure autostart folder exists
+mkdir -p ~/.config/autostart
+
+# Copy the desktop entry and update script into place
+cp "$PI_DIR/autostart/matrix-toy.desktop" ~/.config/autostart/
+cp "$PI_DIR/update_and_run.sh" ~/wifi-toy/
+
+# Make sure the update launcher is executable
+chmod +x ~/wifi-toy/update_and_run.sh
+```
+
+The `.desktop` file points to `/home/seba/wifi-toy/update_and_run.sh`, which logs a `git pull --rebase --autostash` on every boot and then launches `matrix_console.py` with `DISPLAY=:0 SDL_VIDEODRIVER=x11` for the 480×320 TFT.
+
 ## Data files
 The console stores network discovery history and lab flags beside the code for easy persistence on the Pi:
 - `discovered_devices.json` – networks seen with timestamps and signal strength.

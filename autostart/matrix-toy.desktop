@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Matrix Toy
+Exec=/home/seba/wifi-toy/update_and_run.sh
+X-GNOME-Autostart-enabled=true
