@@ -46,6 +46,19 @@ ssh "$PI_HOST" "cd $PI_DIR && PYGAME_HIDE_SUPPORT_PROMPT=1 python3 matrix_main.p
 ssh "$PI_HOST" "cd $PI_DIR && PYGAME_HIDE_SUPPORT_PROMPT=1 python3 matrix_main.py"
 ```
 
+## Tool box (installable utilities)
+The console/tool box can surface quick-launch actions for commonly used tools. Install any you want available, and the
+autostart/update flow will keep the launcher intact.
+
+- Network: `aircrack-ng`, `kismet`, `wireshark`, `bettercap`
+- Bluetooth: `bluez`, `bluetoothctl`, `bettercap`
+- Radio/SDR: `rtl-sdr`, `gqrx-sdr`
+- OSINT: `amass`, `sublist3r`
+- System helpers: `htop`, `nmap`, `tcpdump`
+
+Launchers can point to tool-specific wrapper scripts (e.g., `toolbox/airmon.sh`, `toolbox/scan_wifi.sh`) that you place in
+the project directory and mark executable; they can then be triggered from the console/tool box without altering core files.
+
 ## Autostart + auto-update setup (paste-ready commands)
 Run these on the Pi (over SSH) to install the provided autostart entry and update script so the app always pulls GitHub updates before launching:
 
