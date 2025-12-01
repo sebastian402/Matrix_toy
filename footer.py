@@ -79,7 +79,14 @@ def _normalize_version_label(raw: Optional[str]) -> str:
         return "UNKNOWN VERSION"
 
     cleaned = raw.strip()
-    if not cleaned or cleaned.upper() in {"N/A", "NA", "UNKNOWN"}:
+    cleaned_upper = cleaned.upper()
+    if not cleaned:
+        return "UNKNOWN VERSION"
+
+    if cleaned_upper in {"N/A", "NA", "UNKNOWN", "UNKNOWN VERSION"}:
+        return "UNKNOWN VERSION"
+
+    if cleaned_upper.startswith("VERSION ") and cleaned_upper.endswith("N/A"):
         return "UNKNOWN VERSION"
 
     return cleaned
