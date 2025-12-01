@@ -59,8 +59,10 @@ def _get_local_time():
     return time.strftime("%H:%M:%S %Z")
 
 def _build_ticker_text(state: Dict[str, str]) -> str:
+    version = state.get("version") or "UNKNOWN VERSION"
+
     parts = [
-        f"VERSION {state.get('version', 'UNKNOWN VERSION')}",
+        f"VERSION {version}",
         f"LAN {state.get('lan_ip', 'N/A')}",
         f"PUBLIC {state.get('public_ip', 'N/A')}",
         f"MODEL {state.get('model', 'N/A')}",
@@ -76,18 +78,18 @@ def _normalize_version_label(raw: Optional[str]) -> str:
     """Return a usable version label, avoiding ambiguous placeholders like N/A."""
 
     if not raw:
-        return "UNKNOWN VERSION"
+        return ""
 
     cleaned = raw.strip()
     cleaned_upper = cleaned.upper()
     if not cleaned:
-        return "UNKNOWN VERSION"
+        return ""
 
     if cleaned_upper in {"N/A", "NA", "UNKNOWN", "UNKNOWN VERSION"}:
-        return "UNKNOWN VERSION"
+        return ""
 
     if cleaned_upper.startswith("VERSION ") and cleaned_upper.endswith("N/A"):
-        return "UNKNOWN VERSION"
+        return ""
 
     return cleaned
 
