@@ -237,14 +237,14 @@ def draw_console(
     movie_surf = row_font.render(visible_text, True, (0, 120, 255))
     screen.blit(movie_surf, (10, 30))
 
-    # Draw movie-line cursor (white square) blinking
+    # Draw movie-line cursor (dim green square) blinking
     if int(time.time() * 2) % 2 == 0:
         cursor_size = row_font.get_height() - 4
         cursor_x = 10 + movie_surf.get_width() + 4
         cursor_y = 30 + 2
         pygame.draw.rect(
             screen,
-            WHITE,
+            (40, 80, 40),
             (cursor_x, cursor_y, cursor_size, cursor_size),
         )
 
