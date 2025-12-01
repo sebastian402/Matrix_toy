@@ -1,16 +1,14 @@
-
 """Animated Matrix-style header for the Wi-Fi console.
 
-This module handles the title "dehashing" animation, blinking cursor, and the
-color-shifting countdown indicator displayed at the top of the console. It is
-intentionally self-contained (no cross-module imports) so the header can be
-used in isolation for previews or tests.
+This module handles the title "dehashing" animation and the
+color-shifting countdown indicator displayed at the top of the console.
+It is intentionally self-contained (no cross-module imports) so the
+header can be used in isolation for previews or tests.
 """
 
 import math
 import random
-import time
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import pygame
 
@@ -26,13 +24,19 @@ RED       = (255, 0, 0)
 
 Color = Tuple[int, int, int]
 
-CURSOR_CHAR = "▌"
-
 # Character set for de-hash animation of the title
 JAP_CHARS = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&@\\/_<>[]{}()=-_")
 
-def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int) -> str:
-    """Return a partially revealed/dehashed version of the title text.
+FLASH_TIME = 0.12
+FADE_TIME = 0.6
+
+# Track per-character reveal timestamps to drive flash/fade colors
+_REVEAL_TIMESTAMPS: Dict[int, float] = {}
+_LAST_TITLE: str = ""
+_LAST_PROGRESS: int = 0
+
+def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int) -> Tuple[str, int]:
+    """Return a partially revealed/dehashed version of the title text and progress.
     During the last 1 second of the cycle the title is fully revealed.
 
     Spaces are kept untouched so alignment remains stable while other
@@ -40,16 +44,16 @@ def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int
     """
     period = float(scan_interval)
     if period <= 1:
-        return full_text
+        return full_text, len(full_text)
 
     reveal = period - 1.0  # last 1s stays fully revealed
     cycle_t = cycle_elapsed % period
     if cycle_t >= reveal:
-        return full_text
+        return full_text, len(full_text)
 
     length = len(full_text)
     if length == 0:
-        return full_text
+        return full_text, 0
 
     progress = max(0, min(length, int((cycle_t / reveal) * length)))
     out_chars = []
@@ -62,7 +66,7 @@ def _animate_title_text(full_text: str, cycle_elapsed: float, scan_interval: int
             out_chars.append(char)
         else:
             out_chars.append(random.choice(JAP_CHARS))
-    return "".join(out_chars)
+    return "".join(out_chars), progress
 
 def _lerp_color(a: Color, b: Color, t: float) -> Color:
     """Linear interpolation between two RGB colors."""
@@ -100,6 +104,32 @@ def _get_countdown_color(remaining: float, scan_interval: int) -> Color:
     # 5 -> 0 : solid red
     return RED
 
+def _reset_reveal_state_if_needed(full_text: str, progress: int) -> None:
+    """Clear reveal tracking when a new cycle or title change occurs."""
+    global _LAST_TITLE, _LAST_PROGRESS
+    if full_text != _LAST_TITLE or progress < _LAST_PROGRESS:
+        _REVEAL_TIMESTAMPS.clear()
+        _LAST_TITLE = full_text
+    _LAST_PROGRESS = progress
+
+def _char_color(index: int, progress: int, base_color: Color, now: float) -> Color:
+    """Determine the color for a character based on reveal timing."""
+    if index >= progress:
+        return base_color
+
+    ts = _REVEAL_TIMESTAMPS.get(index)
+    if ts is None:
+        ts = now
+        _REVEAL_TIMESTAMPS[index] = ts
+
+    elapsed = now - ts
+    if elapsed < FLASH_TIME:
+        return WHITE
+
+    fade_elapsed = elapsed - FLASH_TIME
+    t = min(max(fade_elapsed / FADE_TIME, 0.0), 1.0)
+    return _lerp_color(GREEN, BLUE, t)
+
 def draw_header(
     screen: pygame.Surface,
     header_font: pygame.font.Font,
@@ -116,97 +146,88 @@ def draw_header(
 
     This function does NOT clear the screen and does NOT call display.update().
     """
-    # ----- Title with de-hash animation -----
-    cursor_visible = (int(now * 2) % 2) == 0  # ~2 Hz blink
-
     if scanning:
-        # During scanning we always show the full title in blue
-        base_title = title_text
-        title_color = BLUE
-    else:
-        cycle_elapsed = now - cycle_start_time
-        base_title = _animate_title_text(title_text, cycle_elapsed, scan_interval)
+        title_surf = header_font.render(title_text, True, BLUE)
+        title_pos = (10, 8)
+        screen.blit(title_surf, title_pos)
 
-        # Glow effect for green phase; switches to blue in the last second
-        period = float(scan_interval)
-        reveal = period - 1.0
-        cycle_t = cycle_elapsed % period
+        if version_text:
+            version_surf = header_font.render(version_text, True, CYAN)
+            version_width = version_surf.get_width()
+            title_end = title_pos[0] + title_surf.get_width()
 
-        if cycle_t >= reveal:
-            title_color = BLUE
-        else:
-            phase = math.sin(now * 3.0)
-            g_val = int(150 + 105 * (0.5 + 0.5 * phase))
-            title_color = (0, g_val, 0)
+            reserved_right = 140  # keep clear space for countdown + suffix
+            preferred_x = screen_width - reserved_right - version_width - 10
 
-    if cursor_visible:
-        display_title = base_title + CURSOR_CHAR
-    else:
-        display_title = base_title + " "
+            version_x = max(title_end + 10, preferred_x)
+            version_y = title_pos[1]
 
-    title_surf = header_font.render(display_title, True, title_color)
-    title_pos = (10, 8)
-    screen.blit(title_surf, title_pos)
+            if version_x + version_width > screen_width - reserved_right:
+                version_x = title_pos[0]
+                version_y = title_pos[1] + header_font.get_height() + 2
 
-    # ----- Optional version tag -----
-    if version_text:
-        version_surf = header_font.render(version_text, True, CYAN)
-        version_width = version_surf.get_width()
-        title_end = title_pos[0] + title_surf.get_width()
+            screen.blit(version_surf, (version_x, version_y))
 
-        reserved_right = 140  # keep clear space for countdown + suffix
-        preferred_x = screen_width - reserved_right - version_width - 10
-
-        version_x = max(title_end + 10, preferred_x)
-        version_y = title_pos[1]
-
-        # If there is no horizontal room (long title), drop the version below
-        if version_x + version_width > screen_width - reserved_right:
-            version_x = title_pos[0]
-            version_y = title_pos[1] + header_font.get_height() + 2
-
-        screen.blit(version_surf, (version_x, version_y))
-
-    # ----- Countdown / SCANNING -----
-    if scanning:
         cd_text = "SCANNING..."
         cd_color = BLUE
         cd_surf = header_font.render(cd_text, True, cd_color)
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
         return
 
-    # Normal countdown: XXs
+    cycle_elapsed = now - cycle_start_time
+    animated_title, progress = _animate_title_text(title_text, cycle_elapsed, scan_interval)
+
+    period = float(scan_interval)
+    reveal = period - 1.0
+    cycle_t = cycle_elapsed % period
+
+    if cycle_t >= reveal:
+        base_title_color = BLUE
+    else:
+        phase = math.sin(now * 3.0)
+        g_val = int(150 + 105 * (0.5 + 0.5 * phase))
+        base_title_color = (0, g_val, 0)
+
+    _reset_reveal_state_if_needed(title_text, progress)
+
+    # Render animated title per-character to apply flash/fade coloring
+    x = 10
+    y = 8
+    for idx, ch in enumerate(animated_title):
+        color = _char_color(idx, progress, base_title_color, now)
+        char_surf = header_font.render(ch, True, color)
+        screen.blit(char_surf, (x, y))
+        x += char_surf.get_width()
+
+    title_width = x - 10
+
+    # ----- Optional version tag (below the title) -----
+    if version_text:
+        version_surf = header_font.render(version_text, True, CYAN)
+        version_x = 10
+        version_y = y + header_font.get_height() + 2
+        screen.blit(version_surf, (version_x, version_y))
+
+    # ----- Countdown / SCANNING -----
     remaining_clamped = max(0.0, remaining)
     remaining_fmt = f"{remaining_clamped:.3f}"
     base_color = _get_countdown_color(remaining_clamped, scan_interval)
 
-    # Last 3 seconds: blink only the numeric part
     if remaining_clamped <= 3.0:
         blink_on = (int(now * 4) % 2) == 0  # faster blink for urgency
 
-        prefix_str = "RESCAN IN "
         num_str = remaining_fmt
         suffix_str = "s"
 
-        prefix_surf = header_font.render(prefix_str, True, base_color)
         num_surf = header_font.render(num_str, True, base_color if blink_on else BLACK)
         suffix_surf = header_font.render(suffix_str, True, base_color)
 
-        total_width = (
-            prefix_surf.get_width()
-            + num_surf.get_width()
-            + suffix_surf.get_width()
-        )
+        total_width = num_surf.get_width() + suffix_surf.get_width()
         x_start = screen_width - total_width - 10
 
-        screen.blit(prefix_surf, (x_start, 8))
-        screen.blit(num_surf, (x_start + prefix_surf.get_width(), 8))
-        screen.blit(
-            suffix_surf,
-            (x_start + prefix_surf.get_width() + num_surf.get_width(), 8),
-        )
+        screen.blit(num_surf, (x_start, 8))
+        screen.blit(suffix_surf, (x_start + num_surf.get_width(), 8))
     else:
-        # Normal colored countdown (no blinking)
-        cd_text = f"RESCAN IN {remaining_fmt}s"
+        cd_text = f"{remaining_fmt}s"
         cd_surf = header_font.render(cd_text, True, base_color)
         screen.blit(cd_surf, (screen_width - cd_surf.get_width() - 10, 8))
